@@ -19,7 +19,7 @@ from __future__ import absolute_import, division, print_function
 # 3rd party
 import numpy as np
 import warnings
-from scipy.interpolate import interp1d
+from scipy.interpolate import CubicSpline
 from scipy.signal import welch
 
 # local
@@ -184,7 +184,7 @@ def hrv(rpeaks=None, sampling_rate=1000., rri=None, rri_min=300, rri_max=1500, p
                                    detrend_rri=detrend_rri,
                                    show=show_individual)
             out = out.join(hrv_nl)
-                
+
         except ValueError as e:
             print('WARNING: Non-linear features not computed. Check input.')
             print(e)
@@ -313,20 +313,24 @@ def rri_correction(rri=None, threshold=250):
 
     # find artifacts
     artifacts = np.abs(rri - rri_filt) > threshold
-    
+
     # before interpolating, check if the artifacts are at the beginning or end of the sequence
     if len(np.argwhere(artifacts)) >0:
         if min(np.where(artifacts)[0]) < min(np.where(~artifacts)[0]):
             rri = rri[min(np.where(~artifacts)[0]):]
             artifacts = artifacts[min(np.where(~artifacts)[0]):]
-        
+
         if max(np.where(artifacts)[0]) > max(np.where(~artifacts)[0]):
             rri = rri[:max(np.where(~artifacts)[0])]
             artifacts = artifacts[:max(np.where(~artifacts)[0])]
 
-    # replace artifacts with cubic spline interpolation
-    rri[artifacts] = interp1d(np.where(~artifacts)[0], rri[~artifacts],
-                              kind='cubic')(np.where(artifacts)[0])
+    # replace artifacts with spline interpolation; fall back to linear for short sequences
+    good_idx = np.where(~artifacts)[0]
+    bad_idx = np.where(artifacts)[0]
+    if len(good_idx) >= 4:
+        rri[artifacts] = CubicSpline(good_idx, rri[~artifacts])(bad_idx)
+    else:
+        rri[artifacts] = np.interp(bad_idx, good_idx, rri[~artifacts])
 
     return rri
 
@@ -538,7 +542,7 @@ def hrv_frequencydomain(rri=None, duration=None, freq_method='FFT',
     frs = kwargs['frs'] if 'frs' in kwargs else 4
     t = np.cumsum(rri)
     t -= t[0]
-    rri_inter = interp1d(t, rri, 'cubic')
+    rri_inter = CubicSpline(t, rri)
     t_inter = np.arange(t[0], t[-1], 1000. / frs)
     rri_inter = rri_inter(t_inter)
 
@@ -842,8 +846,7 @@ def compute_geometrical(rri, binsize=1/128, show=False):
 
             t = np.array([tmin, n_, nn_hist[1][peak_hist], m_, tmax + binsize])
             y = np.array([0, 0, max_count, 0, 0])
-            q = interp1d(x=t, y=y, kind='linear')
-            q = q(bins)
+            q = np.interp(bins, t, y)
 
             # compute the sum of squared differences
             error = np.sum((nn_hist[0] - q[:-1]) ** 2)
