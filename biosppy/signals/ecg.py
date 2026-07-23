@@ -22,7 +22,7 @@ import math
 import numpy as np
 import scipy.signal as ss
 import matplotlib.pyplot as plt
-from scipy import stats, integrate, interpolate
+from scipy import stats, integrate
 import peakutils
 from scipy.ndimage import filters
 
@@ -1542,9 +1542,9 @@ def Pan_Tompkins_Plus_Plus_segmenter(signal=None, sampling_rate=1000.0):
     vector = [1, 2, 0, -2, -1]
     if sampling_rate != 200:
         int_c = 160 / sampling_rate
-        b = interpolate.interp1d(range(1, 6), [i * sampling_rate / 8 for i in vector])(
-            np.arange(1, 5.1, int_c)
-        )
+        x = np.arange(1, 6, dtype=float)
+        y = np.array([i * sampling_rate / 8 for i in vector], dtype=float)
+        b = np.interp(np.arange(1, 5.1, int_c), x, y)
 
     else:
         b = [i * sampling_rate / 8 for i in vector]
