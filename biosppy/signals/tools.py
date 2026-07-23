@@ -404,7 +404,7 @@ def filter_signal(
         scipy.signal function.
         - Q : float
             Quality factor (only for 'notch' filter). Default: 30.
-            
+
     Returns
     -------
     signal : array
@@ -630,10 +630,10 @@ def smoother(signal=None, kernel="boxzen", size=10, mirror=True, **kwargs):
         aux = np.concatenate(
             (signal[0] * np.ones(size), signal, signal[-1] * np.ones(size))
         )
-        smoothed = np.convolve(w, aux, mode="same")
+        smoothed = ss.convolve(aux, w, mode="same", method="auto")
         smoothed = smoothed[size:-size]
     else:
-        smoothed = np.convolve(w, signal, mode="same")
+        smoothed = ss.convolve(signal, w, mode="same", method="auto")
 
     # output
     params = {"kernel": kernel, "size": size, "mirror": mirror}
