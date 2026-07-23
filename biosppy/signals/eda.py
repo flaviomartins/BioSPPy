@@ -17,7 +17,6 @@ from six.moves import range
 
 # 3rd party
 import numpy as np
-from scipy import interpolate
 
 # local
 from . import tools as st
@@ -188,7 +187,7 @@ def eda_events(signal=None, sampling_rate=1000., method="emotiphai", **kwargs):
 
     else:
         raise TypeError("Please specify a supported method.")
-    
+
     # sanity check
     if len(onsets) == 0:
         raise ValueError("Could not find SCR pulses.")
@@ -278,8 +277,7 @@ def biosppy_decomposition(signal=None, sampling_rate=1000.0, method="smoother",
         # extract edl
         edl_on = np.hstack((ts[0], ts[onsets], ts[-1]))
         edl_amp = np.hstack((signal[0], signal[onsets], signal[-1]))
-        f = interpolate.interp1d(edl_on, edl_amp)
-        edl_signal = f(ts)
+        edl_signal = np.interp(ts, edl_on, edl_amp)
 
     else:
         raise TypeError("Please specify a supported method.")
@@ -339,9 +337,9 @@ def cvx_decomposition(signal=None, sampling_rate=1000.0, tau0=2., tau1=0.7,
         Penalization for the tonic spline coefficients
     solver : ndarray
         Sparse QP solver to be used, see cvxopt.solvers.qp
-    options : dict 
+    options : dict
         solver options, see: http://cvxopt.org/userguide/coneprog.html#algorithm-parameters
-    
+
     Returns
     -------
     edr : array
@@ -356,16 +354,16 @@ def cvx_decomposition(signal=None, sampling_rate=1000.0, tau0=2., tau1=0.7,
         Offset and slope of the linear drift term
     res : array
         Model residuals
-    obj : array 
+    obj : array
         Value of objective function being minimized (eq 15 of paper)
-    
+
     References
     ----------
     .. [cvxEDA] A Greco, G Valenza, A Lanata, EP Scilingo, and L Citi
     "cvxEDA: a Convex Optimization Approach to Electrodermal Activity
     Processing" IEEE Transactions on Biomedical Engineering, 2015. DOI:
     10.1109/TBME.2015.2474131
-    
+
     .. [Figner2011] Figner, Bernd & Murphy, Ryan. (2011). Using skin
     conductance in judgment and decision making research. A Handbook of
     Process Tracing Methods for Decision Research.
@@ -470,7 +468,7 @@ def cvx_decomposition(signal=None, sampling_rate=1000.0, tau0=2., tau1=0.7,
     # output
     args = list(np.array(a).ravel() for a in (r, p, t, l, d, e, obj))
     names = ("edr", "smna", "edl", "tonic_coeff", "linear_drift", "res", "obj")
-    
+
     return utils.ReturnTuple(args, names)
 
 
@@ -575,7 +573,7 @@ def kbk_scr(signal=None, sampling_rate=1000.0, min_amplitude=0.1):
     # check inputs
     if signal is None:
         raise TypeError("Please specify an input signal.")
-    
+
     # extract edr signal
     df = biosppy_decomposition(signal, sampling_rate=sampling_rate)['edr']
 
@@ -675,7 +673,7 @@ def emotiphai_eda(signal=None, sampling_rate=1000., min_amplitude=0.1,
             s = signal[zeros[z]:]  # signal amplitude between event
         else:
             s = signal[zeros[z]:zeros[z + 1]]  # signal amplitude between event
-            
+
         pk = st.find_extrema(signal=s, mode='max')[0]  # get pk between events
         for p in pk:
             if (s[p] - s[0]) > min_amplitude:  # only count events with minimum amplitude
@@ -685,7 +683,7 @@ def emotiphai_eda(signal=None, sampling_rate=1000., min_amplitude=0.1,
     # sanity check
     if len(onsets) == 0:
         raise ValueError("Could not find SCR pulses. Try to adjust min_amplitude or the filter size.")
-    
+
     # convert to array
     onsets, peaks, amps = np.array(onsets), np.array(peaks), np.array(amps)
 
@@ -736,7 +734,7 @@ def rec_times(signal=None, sampling_rate=1000., onsets=None, peaks=None):
             wind = np.array(signal[peaks[i]:])  # last peak to end of signal
         half_rec_idx = np.argwhere(wind <= half_rec_amp)
         six_rec_idx = np.argwhere(wind <= six_rec_amp)
-        
+
         if len(half_rec_idx) > 0:
             half_rec += [half_rec_idx[0][0] / sampling_rate]
         else:
