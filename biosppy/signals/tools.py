@@ -2146,7 +2146,7 @@ def mean_waves(data=None, size=None, step=None):
     if step is None:
         step = size
 
-    if step < 0:
+    if step <= 0:
         raise ValueError("The step must be a positive integer.")
 
     # number of waves
@@ -2155,9 +2155,9 @@ def mean_waves(data=None, size=None, step=None):
     if nb <= 0:
         raise ValueError("Not enough samples for the given `size`.")
 
-    # compute
-    waves = [np.mean(data[i : i + size], axis=0) for i in range(0, L + 1, step)]
-    waves = np.array(waves)
+    # compute (vectorized over all windows)
+    windows = np.lib.stride_tricks.sliding_window_view(data, window_shape=size, axis=0)
+    waves = windows[::step].mean(axis=2)
 
     return utils.ReturnTuple((waves,), ("waves",))
 
@@ -2204,7 +2204,7 @@ def median_waves(data=None, size=None, step=None):
     if step is None:
         step = size
 
-    if step < 0:
+    if step <= 0:
         raise ValueError("The step must be a positive integer.")
 
     # number of waves
@@ -2213,9 +2213,9 @@ def median_waves(data=None, size=None, step=None):
     if nb <= 0:
         raise ValueError("Not enough samples for the given `size`.")
 
-    # compute
-    waves = [np.median(data[i : i + size], axis=0) for i in range(0, L + 1, step)]
-    waves = np.array(waves)
+    # compute (vectorized over all windows)
+    windows = np.lib.stride_tricks.sliding_window_view(data, window_shape=size, axis=0)
+    waves = np.median(windows[::step], axis=2)
 
     return utils.ReturnTuple((waves,), ("waves",))
 
