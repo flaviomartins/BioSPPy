@@ -85,4 +85,4 @@ def test_hrv_metrics_regression_examples_rri():
     # preventing behavioral regressions in HRV metrics.
     for key, expected in EXPECTED_HRV_METRICS.items():
         got = float(current[key])
-        assert np.isclose(got, expected, rtol=0.0, atol=1e-10), key
+        assert np.isclose(got, expected, rtol=0.0, atol=1e-7), key

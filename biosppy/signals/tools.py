@@ -27,6 +27,7 @@ from scipy.signal import windows as ssw
 from scipy import interpolate, optimize
 from scipy.stats import stats
 from scipy.sparse import spdiags, eye, csr_matrix
+from scipy.sparse.linalg import spsolve
 
 
 # local
@@ -2257,12 +2258,13 @@ def detrend_smoothness_priors(signal, smoothing_factor=10):
     d2 = spdiags(aux1.T, [0, 1, 2], t-2, t)
 
     # second computation (z_stat)
+    # Solve (I + lambda^2 * D2^T D2) * trend = signal directly instead of
+    # explicitly inverting the system matrix.
     aux2 = smoothing_factor ** 2 * d2.T * d2
-    inv = np.linalg.inv(csr_matrix(identity) + aux2.todense())
-    z_stat = csr_matrix(identity - inv) * signal
+    system = csr_matrix(identity) + aux2.tocsr()
+    z_trend = np.asarray(spsolve(system, signal))
 
     # detrending
-    z_trend = np.asarray(signal - z_stat)
     z_detrended = np.array(signal) - z_trend
 
     return utils.ReturnTuple((z_detrended.T, z_trend.T), ('detrended', 'trend'))
